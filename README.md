@@ -1,6 +1,6 @@
 ![FLTR](https://nautilus-nonprofit.org/images/fltr-logo.svg?sanitize=true)
 
-#### A pornography filter for individuals and families.
+#### An Internet pornography filter for individuals and families.
 
 ## *Pre-Alpha -- Work In Progress*
 
