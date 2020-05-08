@@ -171,4 +171,16 @@ ip6tables -I FORWARD -i eth0 -j REJECT
 ip6tables-save > /etc/iptables/rules.v6
 systemctl restart netfilter-persistent.service
 
+apt install -y git golang libpcap-dev libusb-dev libnetfilter-queue-dev
+
+wget $(curl -sL https://github.com/bettercap/bettercap/releases/latest | grep -o 'href.*armhf.*zip' | sed 's/href="/https:\/\/github.com/')
+unzip bettercap_linux_armhf_v*.zip && rm bettercap_linux_armhf_v*.zip
+sha256sum -c bettercap_linux_armhf_v*.sha256 && rm bettercap_linux_armhf_v*.sha256 && mv bettercap /usr/local/bin
+
+mkdir -p /var/www/html
+
+bettercap -eval "caplets.update; set https.proxy.certificate.locality Nautilus; https.proxy on; set https.server.certificate.locality Nautilus; https.server on; quit"
+
+cp /root/.bettercap-ca.cert.pem /var/www/html/nautilus.crt
+
 EOACS
