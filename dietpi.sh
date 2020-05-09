@@ -313,4 +313,6 @@ ip6tables -I FORWARD -i eth0 -j REJECT
 ip6tables-save > /etc/iptables/rules.v6
 systemctl restart netfilter-persistent.service
 
+apt install -y screen dsniff openssl sslsplit 
+
 EOACS

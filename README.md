@@ -1,6 +1,6 @@
 ![FLTR](https://nautilus-nonprofit.org/images/fltr-logo.svg?sanitize=true)
 
-#### An Internet filter to block dangerous and unwanted content.
+#### A hardware Internet manager and content filter.
 
 ## _Pre-Alpha -- Work In Progress_
 
