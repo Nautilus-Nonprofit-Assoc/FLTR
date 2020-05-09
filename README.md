@@ -1,7 +1,5 @@
 ![FLTR](https://nautilus-nonprofit.org/images/fltr-logo.svg?sanitize=true)
 
-#### A hardware Internet manager and content filter.
-
 ## _Pre-Alpha -- Work In Progress_
 
 ---

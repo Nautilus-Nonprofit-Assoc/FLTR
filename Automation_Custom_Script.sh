@@ -1,24 +1,8 @@
 #!/bin/bash
 
-sed -i 's/AUTO_SETUP_LOCALE=.*/AUTO_SETUP_LOCALE=en_US.UTF-8/' boot/dietpi.txt
-sed -i 's/AUTO_SETUP_KEYBOARD_LAYOUT=.*/AUTO_SETUP_KEYBOARD_LAYOUT=us/' boot/dietpi.txt
-sed -i 's/AUTO_SETUP_TIMEZONE=.*/AUTO_SETUP_TIMEZONE=America\/Phoenix/' boot/dietpi.txt
-sed -i 's/AUTO_SETUP_NET_HOSTNAME=.*/AUTO_SETUP_NET_HOSTNAME=Nautilus/' boot/dietpi.txt
-sed -i 's/AUTO_SETUP_AUTOMATED=.*/AUTO_SETUP_AUTOMATED=1/' boot/dietpi.txt
-sed -i 's/AUTO_SETUP_GLOBAL_PASSWORD=.*/AUTO_SETUP_GLOBAL_PASSWORD=N@utilus/' boot/dietpi.txt
-sed -i 's/SURVEY_OPTED_IN=.*/SURVEY_OPTED_IN=1/' boot/dietpi.txt
-sed -i 's/CONFIG_BOOT_WAIT_FOR_NETWORK=.*/CONFIG_BOOT_WAIT_FOR_NETWORK=2/' boot/dietpi.txt
-sed -i 's/CONFIG_AUTO_DIETPI_UPDATES=.*/CONFIG_AUTO_DIETPI_UPDATES=1/' boot/dietpi.txt
-sed -i 's/CONFIG_WIFI_COUNTRY_CODE=.*/CONFIG_WIFI_COUNTRY_CODE=US/' boot/dietpi.txt
-sed -i 's/CONFIG_SERIAL_CONSOLE_ENABLE=.*/CONFIG_SERIAL_CONSOLE_ENABLE=0/' boot/dietpi.txt
-sed -i 's/CONFIG_ENABLE_IPV6=.*/CONFIG_ENABLE_IPV6=0/' boot/dietpi.txt
-
-cat > boot/Automation_Custom_Script.sh <<EOACS
-#!/bin/bash
 if [[ -f '/var/lib/dietpi/license.txt' ]]; then mv /var/lib/dietpi/license.txt /var/lib/dietpi/license.accepted ; fi
 
 apt install -y git golang dnsutils
-wget $(curl -sL https://github.com/coredns/coredns/releases/latest | grep -o -m 1 'href.*arm64.*tgz' | sed 's/href="/https:\/\/github.com/') && tar -xf coredns* && rm coredns_* && mv coredns /usr/local/bin
 
 mkdir -p /etc/coredns/zones
 
@@ -241,6 +225,8 @@ crontab <<EOF
 44 5,14 * * * curl -so /tmp/spark https://block.energized.pro/spark/formats/hosts.txt && curl -so /tmp/plite https://block.energized.pro/extensions/porn-lite/formats/hosts && cat /etc/coredns/safesearch /tmp/spark /tmp/plite > /etc/hosts
 EOF
 
+wget $(curl -sL https://github.com/coredns/coredns/releases/latest | grep -o -m 1 'href.*arm64.*tgz' | sed 's/href="/https:\/\/github.com/') && tar -xf coredns* && rm coredns_* && mv coredns /usr/local/bin
+
 cat > /etc/coredns/Corefile <<EOF
 . {
   nsid Nautilus
@@ -313,6 +299,4 @@ ip6tables -I FORWARD -i eth0 -j REJECT
 ip6tables-save > /etc/iptables/rules.v6
 systemctl restart netfilter-persistent.service
 
-apt install -y screen dsniff openssl sslsplit 
-
-EOACS
+apt install -y screen dsniff openssl sslsplit
