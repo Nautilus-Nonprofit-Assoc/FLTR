@@ -295,14 +295,14 @@ sed -i 's/#net\.ipv4\.ip_forward=.*/net.ipv4.ip_forward=1/' /etc/sysctl.conf
 sysctl -p /etc/sysctl.conf
 
 # prevent SSH brute forcing
-iptables -I INPUT -s 224.0.0.0/4 -p tcp --dport ssh -j ACCEPT
-iptables -I INPUT -s 240.0.0.0/4 -p tcp --dport ssh -j ACCEPT
-iptables -I INPUT -s 10.0.0.0/8 -p tcp --dport ssh -j ACCEPT
-iptables -I INPUT -s 127.0.0.0/8 -p tcp --dport ssh -j ACCEPT
-iptables -I INPUT -s 172.16.0.0/12 -p tcp --dport ssh -j ACCEPT
-iptables -I INPUT -s 169.254.0.0/16 -p tcp --dport ssh -j ACCEPT
-iptables -I INPUT -s 192.168.0.0/16 -p tcp --dport ssh -j ACCEPT
-iptables -I INPUT -p tcp --dport ssh -j REJECT
+iptables -A INPUT -p tcp -s 224.0.0.0/4 --dport ssh -j ACCEPT
+iptables -A INPUT -p tcp -s 240.0.0.0/4 --dport ssh -j ACCEPT
+iptables -A INPUT -p tcp -s 10.0.0.0/8 --dport ssh -j ACCEPT
+iptables -A INPUT -p tcp -s 127.0.0.0/8 --dport ssh -j ACCEPT
+iptables -A INPUT -p tcp -s 172.16.0.0/12 --dport ssh -j ACCEPT
+iptables -A INPUT -p tcp -s 169.254.0.0/16 --dport ssh -j ACCEPT
+iptables -A INPUT -p tcp -s 192.168.0.0/16 --dport ssh -j ACCEPT
+iptables -A INPUT -p tcp --dport ssh -j REJECT
 
 # route all external DNS traffic through CoreDNS
 iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT
