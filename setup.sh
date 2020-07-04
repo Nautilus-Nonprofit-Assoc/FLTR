@@ -22,4 +22,6 @@ sed -i "s/CONFIG_ENABLE_IPV6=.*/CONFIG_ENABLE_IPV6=0/" ${DIETPIROOT}/boot/dietpi
 
 cp Automation_Custom_Script.sh ${DIETPIROOT}/boot/ || { echo "Error: automation script copy failed."; exit; }
 
-echo "Success! You may now unmount the eMMC/microSD, transfer it to the hardware device, connect an Ethernet cable, and power it on.  Initial setup process may take a few minutes, please be patient."
+umount "${DIETPIROOT}"
+
+echo "Success! You may now transfer the eMMC/microSD to the hardware device, connect an Ethernet cable, and power it on.  Initial setup process may take up to 10 minutes, please be patient."

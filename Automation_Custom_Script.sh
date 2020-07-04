@@ -1,17 +1,19 @@
 #!/bin/bash
 
+# accept GPL license
 if [[ -f '/var/lib/dietpi/license.txt' ]]; then mv /var/lib/dietpi/license.txt /var/lib/dietpi/license.accepted ; fi
 
+# install prereqs
 apt install -y git golang dnsutils
 
+# setup browser SafeSearch
 mkdir -p /etc/coredns/zones
-
 echo "# Safe Search" > /etc/coredns/safesearch
 
-GIP=$(dig +short forcesafesearch.google.com | tail -n 1)
-YIP=$(dig +short restrict.youtube.com | tail -n 1)
-DIP=$(dig +short safe.duckduckgo.com | tail -n 1)
-BIP=$(dig +short strict.bing.com | tail -n 1)
+GIP=$(dig +short forcesafesearch.google.com | tail -n 1) || GIP="216.239.38.120"
+YIP=$(dig +short restrict.youtube.com | tail -n 1) || YIP="216.239.38.120"
+DIP=$(dig +short safe.duckduckgo.com | tail -n 1) || DIP="52.142.126.100"
+BIP=$(dig +short strict.bing.com | tail -n 1) || BIP="204.79.197.220"
 
 echo "$GIP www.google.com" >> /etc/coredns/safesearch
 echo "$GIP www.google.ac" >> /etc/coredns/safesearch
@@ -219,21 +221,23 @@ echo "$DIP www.duckduckgo.com duckduckgo.com" >> /etc/coredns/safesearch
 
 echo "$BIP www.bing.com bing.com" >> /etc/coredns/safesearch
 
+# set up blocklists
 curl -so /tmp/spark https://block.energized.pro/spark/formats/hosts.txt && curl -so /tmp/plite https://block.energized.pro/extensions/porn-lite/formats/hosts && cat /etc/coredns/safesearch /tmp/spark /tmp/plite > /etc/hosts
 
 crontab <<EOF
 44 5,14 * * * curl -so /tmp/spark https://block.energized.pro/spark/formats/hosts.txt && curl -so /tmp/plite https://block.energized.pro/extensions/porn-lite/formats/hosts && cat /etc/coredns/safesearch /tmp/spark /tmp/plite > /etc/hosts
 EOF
 
+# install and configure CoreDNS
 wget $(curl -sL https://github.com/coredns/coredns/releases/latest | grep -o -m 1 'href.*arm64.*tgz' | sed 's/href="/https:\/\/github.com/') && tar -xf coredns* && rm coredns_* && mv coredns /usr/local/bin
 
 cat > /etc/coredns/Corefile <<EOF
 . {
-  nsid Nautilus
+  nsid FLTR
   root /etc/coredns/zones
   any
   acl {
-    allow net 224.0.0.0/4 240.0.0.0/4 10.0.0.0/8 127.0.0.1/8 172.16.0.0/12 169.254.0.0/16 192.168.0.1/16
+    allow net 224.0.0.0/4 240.0.0.0/4 10.0.0.0/8 127.0.0.0/8 172.16.0.0/12 169.254.0.0/16 192.168.0.0/16
     block
   }
   bufsize 1232
@@ -278,16 +282,29 @@ EOF
 service coredns start
 systemctl enable coredns
 
+# force local DNS traffic through CoreDNS
 echo "nameserver 127.0.0.1" > /etc/resolv.conf
 sed -i 's/#prepend\sdomain-name-servers.*/prepend domain-name-servers 127.0.0.1;/' /etc/dhcp/dhclient.conf
 > /etc/resolvconf/resolv.conf.d/head
 > /etc/resolvconf/resolv.conf.d/tail
 
+# install networking prereqs
 DEBIAN_FRONTEND=noninteractive apt install -y iptables iptables-persistent netfilter-persistent
 
 sed -i 's/#net\.ipv4\.ip_forward=.*/net.ipv4.ip_forward=1/' /etc/sysctl.conf
 sysctl -p /etc/sysctl.conf
 
+# prevent SSH brute forcing
+iptables -I INPUT -s 224.0.0.0/4 -p tcp --dport ssh -j ACCEPT
+iptables -I INPUT -s 240.0.0.0/4 -p tcp --dport ssh -j ACCEPT
+iptables -I INPUT -s 10.0.0.0/8 -p tcp --dport ssh -j ACCEPT
+iptables -I INPUT -s 127.0.0.0/8 -p tcp --dport ssh -j ACCEPT
+iptables -I INPUT -s 172.16.0.0/12 -p tcp --dport ssh -j ACCEPT
+iptables -I INPUT -s 169.254.0.0/16 -p tcp --dport ssh -j ACCEPT
+iptables -I INPUT -s 192.168.0.0/16 -p tcp --dport ssh -j ACCEPT
+iptables -I INPUT -p tcp --dport ssh -j REJECT
+
+# route all external DNS traffic through CoreDNS
 iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT
 iptables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT
 iptables -t nat -A POSTROUTING -j MASQUERADE
@@ -295,8 +312,10 @@ iptables-save > /etc/iptables/rules.v4
 systemctl start netfilter-persistent.service
 systemctl enable netfilter-persistent.service
 
+# disable IPv6
 ip6tables -I FORWARD -i eth0 -j REJECT
 ip6tables-save > /etc/iptables/rules.v6
 systemctl restart netfilter-persistent.service
 
+# install MITM prereqs
 apt install -y screen dsniff openssl sslsplit
