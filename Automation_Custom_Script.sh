@@ -233,7 +233,6 @@ echo "$BIP www.bing.com bing.com" >> /etc/fltr/safesearch
 echo 'curl -so /tmp/spark https://block.energized.pro/spark/formats/hosts.txt && curl -so /tmp/plite https://block.energized.pro/extensions/porn-lite/formats/hosts && cat /etc/fltr/safesearch /tmp/spark /tmp/plite > /etc/hosts' >> /etc/fltr/cron_twice_daily.sh
 
 # DuckDuckGo SafeSearch is a special case - see: https://www.reddit.com/r/duckduckgo/comments/8qwzyl/feature_request_allow_network_operators_for_force/
-# handled at the DNS layer for now but this will handle a static IP if they ever implement it 
 echo 'printf "\n\n# DuckDuckGo SafeSearch\n$(dig +short safe.duckduckgo.com | tail -n 1) www.duckduckgo.com duckduckgo.com\n" >> /etc/hosts' >> /etc/fltr/cron_twice_daily.sh
 
 # initialize blocklists
@@ -256,7 +255,6 @@ cat > /etc/coredns/Corefile <<EOF
   hosts {
     fallthrough
   }
-  rewrite name prefix duckduckgo. safe.duckduckgo.
   rewrite name prefix _esni. nope.
   forward . tls://185.228.168.168 tls://185.228.169.168 {
     tls_servername family-filter-dns.cleanbrowsing.org
