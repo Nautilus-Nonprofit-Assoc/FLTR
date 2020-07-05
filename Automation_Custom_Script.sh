@@ -5,17 +5,17 @@
 if [[ -f '/var/lib/dietpi/license.txt' ]]; then mv /var/lib/dietpi/license.txt /var/lib/dietpi/license.accepted ; fi
 
 # install all prerequisites
-DEBIAN_FRONTEND=noninteractive apt install -y git golang dnsutils nftables iptables iptables-persistent netfilter-persistent screen dsniff openssl sslsplit
+DEBIAN_FRONTEND=noninteractive apt install -y git golang dnsutils iptables iptables-persistent netfilter-persistent screen dsniff openssl sslsplit
 
 # keep iptables due to reliance on legacy tools, like ndpi-netfilter, until they support nftables (https://wiki.debian.org/nftables)
 update-alternatives --set iptables /usr/sbin/iptables-legacy
 update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
-update-alternatives --set arptables /usr/sbin/arptables-legacy
-update-alternatives --set ebtables /usr/sbin/ebtables-legacy
 
-# FLTR scripts
+# FLTR script that runs on system boot
 echo '#!/bin/bash' > /etc/rc.local
 chmod +x /etc/rc.local
+
+# FLTR script that runs twice daily
 mkdir -p /etc/fltr
 echo '#!/bin/bash' > /etc/fltr/cron_twice_daily.sh
 chmod +x /etc/fltr/cron_twice_daily.sh
