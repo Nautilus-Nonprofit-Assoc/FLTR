@@ -5,7 +5,7 @@
 if [[ -f '/var/lib/dietpi/license.txt' ]]; then mv /var/lib/dietpi/license.txt /var/lib/dietpi/license.accepted ; fi
 
 # install all prerequisites
-DEBIAN_FRONTEND=noninteractive apt install -y git golang dnsutils iptables iptables-persistent netfilter-persistent screen dsniff openssl sslsplit
+DEBIAN_FRONTEND=noninteractive apt install -y git golang dnsutils nftables netfilter-persistent screen dsniff openssl sslsplit
 
 # FLTR scripts
 mkdir -p /etc/fltr
@@ -302,29 +302,68 @@ sed -i 's/#prepend\sdomain-name-servers.*/prepend domain-name-servers 127.0.0.1;
 # networking config
 sed -i 's/#net\.ipv4\.ip_forward=.*/net.ipv4.ip_forward=1/' /etc/sysctl.conf
 sysctl -p /etc/sysctl.conf
+nft flush ruleset
 
-# prevent SSH brute forcing
-iptables -A INPUT -p tcp -s 224.0.0.0/4 --dport ssh -j ACCEPT
-iptables -A INPUT -p tcp -s 240.0.0.0/4 --dport ssh -j ACCEPT
-iptables -A INPUT -p tcp -s 10.0.0.0/8 --dport ssh -j ACCEPT
-iptables -A INPUT -p tcp -s 127.0.0.0/8 --dport ssh -j ACCEPT
-iptables -A INPUT -p tcp -s 172.16.0.0/12 --dport ssh -j ACCEPT
-iptables -A INPUT -p tcp -s 169.254.0.0/16 --dport ssh -j ACCEPT
-iptables -A INPUT -p tcp -s 192.168.0.0/16 --dport ssh -j ACCEPT
-iptables -A INPUT -p tcp --dport ssh -j REJECT
+cat > /etc/nftables.conf <<EOF
+#!/usr/sbin/nft -f
 
-# route all external DNS traffic through CoreDNS
-iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT
-iptables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT
-iptables -t nat -A POSTROUTING -j MASQUERADE
-iptables-save > /etc/iptables/rules.v4
-systemctl start netfilter-persistent.service
-systemctl enable netfilter-persistent.service
+flush ruleset
 
 # disable IPv6
-ip6tables -I FORWARD -i eth0 -j REJECT
-ip6tables-save > /etc/iptables/rules.v6
-systemctl restart netfilter-persistent.service
+table ip6 filter {
+        chain INPUT {
+                type filter hook input priority 0; policy drop;
+        }
+}
+
+# prevent SSH brute forcing
+table ip filter {
+        chain INPUT {
+                type filter hook input priority 0; policy accept;
+                ip saddr 224.0.0.0/4 tcp dport ssh counter packets 0 bytes 0 accept
+                ip saddr 240.0.0.0/4 tcp dport ssh counter packets 0 bytes 0 accept
+                ip saddr 10.0.0.0/8 tcp dport ssh counter packets 0 bytes 0 accept
+                ip saddr 127.0.0.0/8 tcp dport ssh counter packets 0 bytes 0 accept
+                ip saddr 172.16.0.0/12 tcp dport ssh counter packets 0 bytes 0 accept
+                ip saddr 169.254.0.0/16 tcp dport ssh counter packets 0 bytes 0 accept
+                ip saddr 192.168.0.0/16 tcp dport ssh counter packets 32 bytes 2112 accept
+                tcp dport ssh counter packets 0 bytes 0 reject
+        }
+
+        chain FORWARD {
+                type filter hook forward priority 0; policy accept;
+        }
+
+        chain OUTPUT {
+                type filter hook output priority 0; policy accept;
+        }
+}
+
+# route all external DNS traffic through CoreDNS
+table ip nat {
+        chain PREROUTING {
+                type nat hook prerouting priority -100; policy accept;
+                udp dport domain counter packets 0 bytes 0
+                tcp dport domain counter packets 0 bytes 0
+        }
+
+        chain INPUT {
+                type nat hook input priority 100; policy accept;
+        }
+
+        chain POSTROUTING {
+                type nat hook postrouting priority 100; policy accept;
+                counter packets 1 bytes 164 masquerade
+        }
+
+        chain OUTPUT {
+                type nat hook output priority -100; policy accept;
+        }
+}
+
+EOF
+
+service nftables start && systemctl enable nftables
 
 # arp spoof (dev)
 echo "screen -S fltr_arpspoof -d -m arpspoof -i eth0 -t TESTMACHINEIPADDRESS $(ip r | grep '^default' | cut -d' ' -f3)" >> /etc/fltr/cron_at_boot.sh
