@@ -5,17 +5,10 @@
 if [[ -f '/var/lib/dietpi/license.txt' ]]; then mv /var/lib/dietpi/license.txt /var/lib/dietpi/license.accepted ; fi
 
 # install all prerequisites
-DEBIAN_FRONTEND=noninteractive apt install -y git golang dnsutils iptables iptables-persistent netfilter-persistent screen dsniff openssl sslsplit
+PKGS="git golang dnsutils screen dsniff"
+apt -t buster-backports install -y ${PKGS} || apt install -y ${PKGS}
 
-# keep iptables due to reliance on legacy tools, like ndpi-netfilter, until they support nftables (https://wiki.debian.org/nftables)
-update-alternatives --set iptables /usr/sbin/iptables-legacy
-update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
-
-# FLTR script that runs on system boot
-echo '#!/bin/bash' > /etc/rc.local
-chmod +x /etc/rc.local
-
-# FLTR script that runs twice daily
+# run twice daily
 mkdir -p /etc/fltr
 echo '#!/bin/bash' > /etc/fltr/cron_twice_daily.sh
 chmod +x /etc/fltr/cron_twice_daily.sh
@@ -24,223 +17,224 @@ crontab <<EOF
 EOF
 
 # set up browser SafeSearch
-echo "# Safe Search" > /etc/fltr/safesearch
-
 GIP=$(dig +short forcesafesearch.google.com | tail -n 1) || GIP="216.239.38.120"
 YIP=$(dig +short restrict.youtube.com | tail -n 1) || YIP="216.239.38.120"
 BIP=$(dig +short strict.bing.com | tail -n 1) || BIP="204.79.197.220"
+echo "# Safe Search" > /etc/fltr/safesearch
+cat >> /etc/fltr/safesearch <<EOF
+${GIP} www.google.com
+${GIP} www.google.ac
+${GIP} www.google.ad
+${GIP} www.google.ae
+${GIP} www.google.com.af
+${GIP} www.google.com.ag
+${GIP} www.google.com.ai
+${GIP} www.google.al
+${GIP} www.google.am
+${GIP} www.google.co.ao
+${GIP} www.google.com.ar
+${GIP} www.google.as
+${GIP} www.google.at
+${GIP} www.google.com.au
+${GIP} www.google.az
+${GIP} www.google.ba
+${GIP} www.google.com.bd
+${GIP} www.google.be
+${GIP} www.google.bf
+${GIP} www.google.bg
+${GIP} www.google.com.bh
+${GIP} www.google.bi
+${GIP} www.google.bj
+${GIP} www.google.com.bn
+${GIP} www.google.com.bo
+${GIP} www.google.com.br
+${GIP} www.google.bs
+${GIP} www.google.bt
+${GIP} www.google.co.bw
+${GIP} www.google.by
+${GIP} www.google.com.bz
+${GIP} www.google.ca
+${GIP} www.google.com.kh
+${GIP} www.google.cc
+${GIP} www.google.cd
+${GIP} www.google.cf
+${GIP} www.google.cat
+${GIP} www.google.cg
+${GIP} www.google.ch
+${GIP} www.google.ci
+${GIP} www.google.co.ck
+${GIP} www.google.cl
+${GIP} www.google.cm
+${GIP} www.google.cn
+${GIP} www.google.com.co
+${GIP} www.google.co.cr
+${GIP} www.google.com.cu
+${GIP} www.google.cv
+${GIP} www.google.com.cy
+${GIP} www.google.cz
+${GIP} www.google.de
+${GIP} www.google.dj
+${GIP} www.google.dk
+${GIP} www.google.dm
+${GIP} www.google.com.do
+${GIP} www.google.dz
+${GIP} www.google.com.ec
+${GIP} www.google.ee
+${GIP} www.google.com.eg
+${GIP} www.google.es
+${GIP} www.google.com.et
+${GIP} www.google.fi
+${GIP} www.google.com.fj
+${GIP} www.google.fm
+${GIP} www.google.fr
+${GIP} www.google.ga
+${GIP} www.google.ge
+${GIP} www.google.gf
+${GIP} www.google.gg
+${GIP} www.google.com.gh
+${GIP} www.google.com.gi
+${GIP} www.google.gl
+${GIP} www.google.gm
+${GIP} www.google.gp
+${GIP} www.google.gr
+${GIP} www.google.com.gt
+${GIP} www.google.gy
+${GIP} www.google.com.hk
+${GIP} www.google.hn
+${GIP} www.google.hr
+${GIP} www.google.ht
+${GIP} www.google.hu
+${GIP} www.google.co.id
+${GIP} www.google.iq
+${GIP} www.google.ie
+${GIP} www.google.co.il
+${GIP} www.google.im
+${GIP} www.google.co.in
+${GIP} www.google.io
+${GIP} www.google.is
+${GIP} www.google.it
+${GIP} www.google.je
+${GIP} www.google.com.jm
+${GIP} www.google.jo
+${GIP} www.google.co.jp
+${GIP} www.google.co.ke
+${GIP} www.google.ki
+${GIP} www.google.kg
+${GIP} www.google.co.kr
+${GIP} www.google.com.kw
+${GIP} www.google.kz
+${GIP} www.google.la
+${GIP} www.google.com.lb
+${GIP} www.google.com.lc
+${GIP} www.google.li
+${GIP} www.google.lk
+${GIP} www.google.co.ls
+${GIP} www.google.lt
+${GIP} www.google.lu
+${GIP} www.google.lv
+${GIP} www.google.com.ly
+${GIP} www.google.co.ma
+${GIP} www.google.md
+${GIP} www.google.me
+${GIP} www.google.mg
+${GIP} www.google.mk
+${GIP} www.google.ml
+${GIP} www.google.com.mm
+${GIP} www.google.mn
+${GIP} www.google.ms
+${GIP} www.google.com.mt
+${GIP} www.google.mu
+${GIP} www.google.mv
+${GIP} www.google.mw
+${GIP} www.google.com.mx
+${GIP} www.google.com.my
+${GIP} www.google.co.mz
+${GIP} www.google.com.na
+${GIP} www.google.ne
+${GIP} www.google.com.nf
+${GIP} www.google.com.ng
+${GIP} www.google.com.ni
+${GIP} www.google.nl
+${GIP} www.google.no
+${GIP} www.google.com.np
+${GIP} www.google.nr
+${GIP} www.google.nu
+${GIP} www.google.co.nz
+${GIP} www.google.com.om
+${GIP} www.google.com.pk
+${GIP} www.google.com.pa
+${GIP} www.google.com.pe
+${GIP} www.google.com.ph
+${GIP} www.google.pl
+${GIP} www.google.com.pg
+${GIP} www.google.pn
+${GIP} www.google.com.pr
+${GIP} www.google.ps
+${GIP} www.google.pt
+${GIP} www.google.com.py
+${GIP} www.google.com.qa
+${GIP} www.google.ro
+${GIP} www.google.rs
+${GIP} www.google.ru
+${GIP} www.google.rw
+${GIP} www.google.com.sa
+${GIP} www.google.com.sb
+${GIP} www.google.sc
+${GIP} www.google.se
+${GIP} www.google.com.sg
+${GIP} www.google.sh
+${GIP} www.google.si
+${GIP} www.google.sk
+${GIP} www.google.com.sl
+${GIP} www.google.sn
+${GIP} www.google.sm
+${GIP} www.google.so
+${GIP} www.google.st
+${GIP} www.google.sr
+${GIP} www.google.com.sv
+${GIP} www.google.td
+${GIP} www.google.tg
+${GIP} www.google.co.th
+${GIP} www.google.com.tj
+${GIP} www.google.tk
+${GIP} www.google.tl
+${GIP} www.google.tm
+${GIP} www.google.to
+${GIP} www.google.tn
+${GIP} www.google.com.tr
+${GIP} www.google.tt
+${GIP} www.google.com.tw
+${GIP} www.google.co.tz
+${GIP} www.google.com.ua
+${GIP} www.google.co.ug
+${GIP} www.google.co.uk
+${GIP} www.google.com
+${GIP} www.google.com.uy
+${GIP} www.google.co.uz
+${GIP} www.google.com.vc
+${GIP} www.google.co.ve
+${GIP} www.google.vg
+${GIP} www.google.co.vi
+${GIP} www.google.com.vn
+${GIP} www.google.vu
+${GIP} www.google.ws
+${GIP} www.google.co.za
+${GIP} www.google.co.zm
+${GIP} www.google.co.zw
+${YIP} www.youtube.com m.youtube.com youtubei.googleapis.com youtube.googleapis.com www.youtube-nocookie.com
+${BIP} www.bing.com bing.com
+EOF
 
-echo "$GIP www.google.com" >> /etc/fltr/safesearch
-echo "$GIP www.google.ac" >> /etc/fltr/safesearch
-echo "$GIP www.google.ad" >> /etc/fltr/safesearch
-echo "$GIP www.google.ae" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.af" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.ag" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.ai" >> /etc/fltr/safesearch
-echo "$GIP www.google.al" >> /etc/fltr/safesearch
-echo "$GIP www.google.am" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.ao" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.ar" >> /etc/fltr/safesearch
-echo "$GIP www.google.as" >> /etc/fltr/safesearch
-echo "$GIP www.google.at" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.au" >> /etc/fltr/safesearch
-echo "$GIP www.google.az" >> /etc/fltr/safesearch
-echo "$GIP www.google.ba" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.bd" >> /etc/fltr/safesearch
-echo "$GIP www.google.be" >> /etc/fltr/safesearch
-echo "$GIP www.google.bf" >> /etc/fltr/safesearch
-echo "$GIP www.google.bg" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.bh" >> /etc/fltr/safesearch
-echo "$GIP www.google.bi" >> /etc/fltr/safesearch
-echo "$GIP www.google.bj" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.bn" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.bo" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.br" >> /etc/fltr/safesearch
-echo "$GIP www.google.bs" >> /etc/fltr/safesearch
-echo "$GIP www.google.bt" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.bw" >> /etc/fltr/safesearch
-echo "$GIP www.google.by" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.bz" >> /etc/fltr/safesearch
-echo "$GIP www.google.ca" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.kh" >> /etc/fltr/safesearch
-echo "$GIP www.google.cc" >> /etc/fltr/safesearch
-echo "$GIP www.google.cd" >> /etc/fltr/safesearch
-echo "$GIP www.google.cf" >> /etc/fltr/safesearch
-echo "$GIP www.google.cat" >> /etc/fltr/safesearch
-echo "$GIP www.google.cg" >> /etc/fltr/safesearch
-echo "$GIP www.google.ch" >> /etc/fltr/safesearch
-echo "$GIP www.google.ci" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.ck" >> /etc/fltr/safesearch
-echo "$GIP www.google.cl" >> /etc/fltr/safesearch
-echo "$GIP www.google.cm" >> /etc/fltr/safesearch
-echo "$GIP www.google.cn" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.co" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.cr" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.cu" >> /etc/fltr/safesearch
-echo "$GIP www.google.cv" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.cy" >> /etc/fltr/safesearch
-echo "$GIP www.google.cz" >> /etc/fltr/safesearch
-echo "$GIP www.google.de" >> /etc/fltr/safesearch
-echo "$GIP www.google.dj" >> /etc/fltr/safesearch
-echo "$GIP www.google.dk" >> /etc/fltr/safesearch
-echo "$GIP www.google.dm" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.do" >> /etc/fltr/safesearch
-echo "$GIP www.google.dz" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.ec" >> /etc/fltr/safesearch
-echo "$GIP www.google.ee" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.eg" >> /etc/fltr/safesearch
-echo "$GIP www.google.es" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.et" >> /etc/fltr/safesearch
-echo "$GIP www.google.fi" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.fj" >> /etc/fltr/safesearch
-echo "$GIP www.google.fm" >> /etc/fltr/safesearch
-echo "$GIP www.google.fr" >> /etc/fltr/safesearch
-echo "$GIP www.google.ga" >> /etc/fltr/safesearch
-echo "$GIP www.google.ge" >> /etc/fltr/safesearch
-echo "$GIP www.google.gf" >> /etc/fltr/safesearch
-echo "$GIP www.google.gg" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.gh" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.gi" >> /etc/fltr/safesearch
-echo "$GIP www.google.gl" >> /etc/fltr/safesearch
-echo "$GIP www.google.gm" >> /etc/fltr/safesearch
-echo "$GIP www.google.gp" >> /etc/fltr/safesearch
-echo "$GIP www.google.gr" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.gt" >> /etc/fltr/safesearch
-echo "$GIP www.google.gy" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.hk" >> /etc/fltr/safesearch
-echo "$GIP www.google.hn" >> /etc/fltr/safesearch
-echo "$GIP www.google.hr" >> /etc/fltr/safesearch
-echo "$GIP www.google.ht" >> /etc/fltr/safesearch
-echo "$GIP www.google.hu" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.id" >> /etc/fltr/safesearch
-echo "$GIP www.google.iq" >> /etc/fltr/safesearch
-echo "$GIP www.google.ie" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.il" >> /etc/fltr/safesearch
-echo "$GIP www.google.im" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.in" >> /etc/fltr/safesearch
-echo "$GIP www.google.io" >> /etc/fltr/safesearch
-echo "$GIP www.google.is" >> /etc/fltr/safesearch
-echo "$GIP www.google.it" >> /etc/fltr/safesearch
-echo "$GIP www.google.je" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.jm" >> /etc/fltr/safesearch
-echo "$GIP www.google.jo" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.jp" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.ke" >> /etc/fltr/safesearch
-echo "$GIP www.google.ki" >> /etc/fltr/safesearch
-echo "$GIP www.google.kg" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.kr" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.kw" >> /etc/fltr/safesearch
-echo "$GIP www.google.kz" >> /etc/fltr/safesearch
-echo "$GIP www.google.la" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.lb" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.lc" >> /etc/fltr/safesearch
-echo "$GIP www.google.li" >> /etc/fltr/safesearch
-echo "$GIP www.google.lk" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.ls" >> /etc/fltr/safesearch
-echo "$GIP www.google.lt" >> /etc/fltr/safesearch
-echo "$GIP www.google.lu" >> /etc/fltr/safesearch
-echo "$GIP www.google.lv" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.ly" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.ma" >> /etc/fltr/safesearch
-echo "$GIP www.google.md" >> /etc/fltr/safesearch
-echo "$GIP www.google.me" >> /etc/fltr/safesearch
-echo "$GIP www.google.mg" >> /etc/fltr/safesearch
-echo "$GIP www.google.mk" >> /etc/fltr/safesearch
-echo "$GIP www.google.ml" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.mm" >> /etc/fltr/safesearch
-echo "$GIP www.google.mn" >> /etc/fltr/safesearch
-echo "$GIP www.google.ms" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.mt" >> /etc/fltr/safesearch
-echo "$GIP www.google.mu" >> /etc/fltr/safesearch
-echo "$GIP www.google.mv" >> /etc/fltr/safesearch
-echo "$GIP www.google.mw" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.mx" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.my" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.mz" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.na" >> /etc/fltr/safesearch
-echo "$GIP www.google.ne" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.nf" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.ng" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.ni" >> /etc/fltr/safesearch
-echo "$GIP www.google.nl" >> /etc/fltr/safesearch
-echo "$GIP www.google.no" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.np" >> /etc/fltr/safesearch
-echo "$GIP www.google.nr" >> /etc/fltr/safesearch
-echo "$GIP www.google.nu" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.nz" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.om" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.pk" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.pa" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.pe" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.ph" >> /etc/fltr/safesearch
-echo "$GIP www.google.pl" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.pg" >> /etc/fltr/safesearch
-echo "$GIP www.google.pn" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.pr" >> /etc/fltr/safesearch
-echo "$GIP www.google.ps" >> /etc/fltr/safesearch
-echo "$GIP www.google.pt" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.py" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.qa" >> /etc/fltr/safesearch
-echo "$GIP www.google.ro" >> /etc/fltr/safesearch
-echo "$GIP www.google.rs" >> /etc/fltr/safesearch
-echo "$GIP www.google.ru" >> /etc/fltr/safesearch
-echo "$GIP www.google.rw" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.sa" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.sb" >> /etc/fltr/safesearch
-echo "$GIP www.google.sc" >> /etc/fltr/safesearch
-echo "$GIP www.google.se" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.sg" >> /etc/fltr/safesearch
-echo "$GIP www.google.sh" >> /etc/fltr/safesearch
-echo "$GIP www.google.si" >> /etc/fltr/safesearch
-echo "$GIP www.google.sk" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.sl" >> /etc/fltr/safesearch
-echo "$GIP www.google.sn" >> /etc/fltr/safesearch
-echo "$GIP www.google.sm" >> /etc/fltr/safesearch
-echo "$GIP www.google.so" >> /etc/fltr/safesearch
-echo "$GIP www.google.st" >> /etc/fltr/safesearch
-echo "$GIP www.google.sr" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.sv" >> /etc/fltr/safesearch
-echo "$GIP www.google.td" >> /etc/fltr/safesearch
-echo "$GIP www.google.tg" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.th" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.tj" >> /etc/fltr/safesearch
-echo "$GIP www.google.tk" >> /etc/fltr/safesearch
-echo "$GIP www.google.tl" >> /etc/fltr/safesearch
-echo "$GIP www.google.tm" >> /etc/fltr/safesearch
-echo "$GIP www.google.to" >> /etc/fltr/safesearch
-echo "$GIP www.google.tn" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.tr" >> /etc/fltr/safesearch
-echo "$GIP www.google.tt" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.tw" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.tz" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.ua" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.ug" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.uk" >> /etc/fltr/safesearch
-echo "$GIP www.google.com" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.uy" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.uz" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.vc" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.ve" >> /etc/fltr/safesearch
-echo "$GIP www.google.vg" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.vi" >> /etc/fltr/safesearch
-echo "$GIP www.google.com.vn" >> /etc/fltr/safesearch
-echo "$GIP www.google.vu" >> /etc/fltr/safesearch
-echo "$GIP www.google.ws" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.za" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.zm" >> /etc/fltr/safesearch
-echo "$GIP www.google.co.zw" >> /etc/fltr/safesearch
+# reset /etc/hosts
+echo 'printf "# Host Addresses\n127.0.0.1 localhost\n::1 localhost ip6-localhost ip6-loopback\n\n" > /etc/hosts' >> /etc/fltr/cron_twice_daily.sh
 
-echo "$YIP www.youtube.com m.youtube.com youtubei.googleapis.com youtube.googleapis.com www.youtube-nocookie.com" >> /etc/fltr/safesearch
+# add Safe Search to /etc/hosts
+echo "cat /etc/fltr/safesearch >> /etc/hosts" >> /etc/fltr/cron_twice_daily.sh
 
-echo "$BIP www.bing.com bing.com" >> /etc/fltr/safesearch
+# DuckDuckGo Safe Search is a special case - see: https://www.reddit.com/r/duckduckgo/comments/8qwzyl/feature_request_allow_network_operators_for_force/
+echo 'printf "$(dig +short safe.duckduckgo.com | tail -n 1) www.duckduckgo.com duckduckgo.com\n\n" >> /etc/hosts' >> /etc/fltr/cron_twice_daily.sh
 
-# set up blocklists
-echo 'curl -so /tmp/spark https://block.energized.pro/spark/formats/hosts.txt && curl -so /tmp/plite https://block.energized.pro/extensions/porn-lite/formats/hosts && cat /etc/fltr/safesearch /tmp/spark /tmp/plite > /etc/hosts' >> /etc/fltr/cron_twice_daily.sh
-
-# DuckDuckGo SafeSearch is a special case - see: https://www.reddit.com/r/duckduckgo/comments/8qwzyl/feature_request_allow_network_operators_for_force/
-echo 'printf "\n\n# DuckDuckGo SafeSearch\n$(dig +short safe.duckduckgo.com | tail -n 1) www.duckduckgo.com duckduckgo.com\n" >> /etc/hosts' >> /etc/fltr/cron_twice_daily.sh
-
-# initialize blocklists
+# activate Safe Search
 /etc/fltr/cron_twice_daily.sh
 
 # install and configure CoreDNS
@@ -304,33 +298,3 @@ sed -i 's/#prepend\sdomain-name-servers.*/prepend domain-name-servers 127.0.0.1;
 # networking config
 sed -i 's/#net\.ipv4\.ip_forward=.*/net.ipv4.ip_forward=1/' /etc/sysctl.conf
 sysctl -p /etc/sysctl.conf
-
-# prevent SSH brute forcing
-iptables -A INPUT -p tcp -s 224.0.0.0/4 --dport ssh -j ACCEPT
-iptables -A INPUT -p tcp -s 240.0.0.0/4 --dport ssh -j ACCEPT
-iptables -A INPUT -p tcp -s 10.0.0.0/8 --dport ssh -j ACCEPT
-iptables -A INPUT -p tcp -s 127.0.0.0/8 --dport ssh -j ACCEPT
-iptables -A INPUT -p tcp -s 172.16.0.0/12 --dport ssh -j ACCEPT
-iptables -A INPUT -p tcp -s 169.254.0.0/16 --dport ssh -j ACCEPT
-iptables -A INPUT -p tcp -s 192.168.0.0/16 --dport ssh -j ACCEPT
-iptables -A INPUT -p tcp --dport ssh -j REJECT
-
-# route all external DNS traffic through CoreDNS
-iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT
-iptables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT
-iptables -t nat -A POSTROUTING -j MASQUERADE
-
-iptables-save > /etc/iptables/rules.v4
-systemctl start netfilter-persistent.service && systemctl enable netfilter-persistent.service
-
-# disable IPv6
-ip6tables -I FORWARD -i eth0 -j REJECT
-ip6tables-save > /etc/iptables/rules.v6
-
-systemctl restart netfilter-persistent.service
-
-# arp spoof (dev)
-echo "screen -S fltr_arpspoof -d -m arpspoof -i eth0 -t TESTMACHINEIPADDRESS $(ip r | grep '^default' | cut -d' ' -f3)" >> /etc/rc.local
-
-# arp spoof (prod)
-#echo "screen -S fltr_arpspoof -d -m arpspoof -i eth0 $(ip r | grep '^default' | cut -d' ' -f3)" >> /etc/rc.local
