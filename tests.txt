@@ -1,0 +1,29 @@
+# Run on FLTR unit:
+cat > ./dnstests <<EOF
+dig @127.0.0.1 google.com | grep -q NOERROR && echo DNS test 1/3: PASS || echo DNS test 1/3: FAIL
+dig @$(hostname -I | cut -d' ' -f1) google.com | grep -q NOERROR && echo DNS test 2/3: PASS || echo DNS test 2/3: FAIL
+dig badexample.com | grep -q NXDOMAIN && echo DNS test 3/3: PASS || echo DNS test 3/3: FAIL
+dig sigok.verteiltesysteme.net +dnssec | grep -q NOERROR && echo DNSSEC test 1/2: PASS || echo DNS test 1/2: FAIL
+dig sigfail.verteiltesysteme.net +dnssec | grep -q SERVFAIL && echo DNSSEC test 2/2: PASS || echo DNS test 2/2: FAIL
+dig testentry.rpz.urlhaus.abuse.ch | grep -q NXDOMAIN && echo SafeSearch test 1/2: PASS || echo SafeSearch test 1/2: FAIL
+getent ahosts duckduckgo.com | grep -q $(dig +short safe.duckduckgo.com | tail -n 1) && echo SafeSearch test 2/2: PASS || echo SafeSearch test 2/2: FAIL
+curl -s -L -m 5 http://example.com | grep -q illustrative && echo curl test: PASS || echo curl test: FAIL
+EOF
+clear
+/bin/bash ./dnstests && rm ./dnstests
+
+# Prepare for target client tests (replace TARGETCLIENTIP with actual IP address):
+screen -d -m bettercap -eval "set arp.spoof.targets TARGETCLIENTIP; arp.spoof on"
+
+# Run on target client:
+cat > ./dnstests <<EOF
+dig google.com | grep -q NOERROR && echo DNS test 1/2: PASS || echo DNS test 1/2: FAIL
+dig badexample.com | grep -q NXDOMAIN && echo DNS test 2/2: PASS || echo DNS test 2/2: FAIL
+dig sigok.verteiltesysteme.net +dnssec | grep -q NOERROR && echo DNSSEC test 1/2: PASS || echo DNS test 1/2: FAIL
+dig sigfail.verteiltesysteme.net +dnssec | grep -q SERVFAIL && echo DNSSEC test 2/2: PASS || echo DNS test 2/2: FAIL
+dig testentry.rpz.urlhaus.abuse.ch | grep -q NXDOMAIN && echo SafeSearch test 1/2: PASS || echo SafeSearch test 1/2: FAIL
+getent ahosts duckduckgo.com | grep -q $(dig +short safe.duckduckgo.com | tail -n 1) && echo SafeSearch test 2/2: PASS || echo SafeSearch test 2/2: FAIL
+curl -s -L -m 5 http://example.com | grep -q illustrative && echo curl test: PASS || echo curl test: FAIL
+EOF
+clear
+/bin/bash ./dnstests && rm ./dnstests

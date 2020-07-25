@@ -1,12 +1,7 @@
 #!/bin/bash
 
-# accept GPL license
-# Note: will be replaced soon by AUTO_SETUP_ACCEPT_LICENSE=1 (see: https://github.com/MichaIng/DietPi/pull/3621 )
-if [[ -f '/var/lib/dietpi/license.txt' ]]; then mv /var/lib/dietpi/license.txt /var/lib/dietpi/license.accepted ; fi
-
 # install all prerequisites
-PKGS="git golang dnsutils screen dsniff"
-apt -t buster-backports install -y ${PKGS} || apt install -y ${PKGS}
+DEBIAN_FRONTEND=noninteractive apt -t buster-backports install -y -qq git golang-go iptables iptables-persistent netfilter-persistent dnsutils screen build-essential libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config
 
 # run twice daily
 mkdir -p /etc/fltr
@@ -232,6 +227,8 @@ echo 'printf "# Host Addresses\n127.0.0.1 localhost\n::1 localhost ip6-localhost
 echo "cat /etc/fltr/safesearch >> /etc/hosts" >> /etc/fltr/cron_twice_daily.sh
 
 # DuckDuckGo Safe Search is a special case - see: https://www.reddit.com/r/duckduckgo/comments/8qwzyl/feature_request_allow_network_operators_for_force/
+dig duckduckgo.com
+dig safe.duckduckgo.com
 echo 'printf "$(dig +short safe.duckduckgo.com | tail -n 1) www.duckduckgo.com duckduckgo.com\n\n" >> /etc/hosts' >> /etc/fltr/cron_twice_daily.sh
 
 # activate Safe Search
@@ -247,7 +244,7 @@ cat > /etc/coredns/Corefile <<EOF
   root /etc/coredns/zones
   any
   acl {
-    allow net 224.0.0.0/4 240.0.0.0/4 10.0.0.0/8 127.0.0.0/8 172.16.0.0/12 169.254.0.0/16 192.168.0.0/16
+    allow net 224.0.0.0/4 240.0.0.0/4 10.0.0.0/8 172.16.0.0/12 169.254.0.0/16 192.168.0.0/16 127.0.0.0/24
     block
   }
   bufsize 1232
@@ -289,12 +286,43 @@ EOF
 
 service coredns start && systemctl enable coredns
 
+# networking config
+sed -i 's/#net\.ipv4\.ip_forward=.*/net.ipv4.ip_forward=1/' /etc/sysctl.conf
+sysctl -p /etc/sysctl.conf
+
 # force local DNS traffic through CoreDNS
 echo "nameserver 127.0.0.1" > /etc/resolv.conf
 sed -i 's/#prepend\sdomain-name-servers.*/prepend domain-name-servers 127.0.0.1;/' /etc/dhcp/dhclient.conf
 > /etc/resolvconf/resolv.conf.d/head
 > /etc/resolvconf/resolv.conf.d/tail
 
-# networking config
-sed -i 's/#net\.ipv4\.ip_forward=.*/net.ipv4.ip_forward=1/' /etc/sysctl.conf
-sysctl -p /etc/sysctl.conf
+# use iptables vs. nftables for performance reasons
+update-alternatives --set iptables /usr/sbin/iptables-legacy
+update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+
+# prevent SSH brute forcing
+iptables -A INPUT -p tcp -s 224.0.0.0/4 --dport ssh -j ACCEPT
+iptables -A INPUT -p tcp -s 240.0.0.0/4 --dport ssh -j ACCEPT
+iptables -A INPUT -p tcp -s 10.0.0.0/8 --dport ssh -j ACCEPT
+iptables -A INPUT -p tcp -s 172.16.0.0/12 --dport ssh -j ACCEPT
+iptables -A INPUT -p tcp -s 169.254.0.0/16 --dport ssh -j ACCEPT
+iptables -A INPUT -p tcp -s 192.168.0.0/16 --dport ssh -j ACCEPT
+iptables -A INPUT -p tcp --dport ssh -j REJECT
+
+# force external DNS traffic through CoreDNS
+iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT
+iptables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT
+iptables -t nat -A POSTROUTING -j MASQUERADE
+
+# disable IPv6
+ip6tables -I FORWARD -i eth0 -j REJECT
+
+# save iptables settings
+iptables-save > /etc/iptables/rules.v4
+ip6tables-save > /etc/iptables/rules.v6
+systemctl start netfilter-persistent.service && systemctl enable netfilter-persistent.service
+
+# install bettercap
+cd /root
+go get -u github.com/bettercap/bettercap
+mv /root/go/bin/bettercap /usr/local/bin && rm -rf /root/go

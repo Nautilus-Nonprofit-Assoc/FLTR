@@ -23,7 +23,6 @@ sed -i "s/CONFIG_SERIAL_CONSOLE_ENABLE=.*/CONFIG_SERIAL_CONSOLE_ENABLE=0/" ${DIE
 sed -i "s/CONFIG_ENABLE_IPV6=.*/CONFIG_ENABLE_IPV6=0/" ${DIETPIROOT}/boot/dietpi.txt
 
 cp Automation_Custom_Script.sh ${DIETPIROOT}/boot/ || { echo "Error: automation script copy failed."; exit; }
-sed -i "s/TESTMACHINEIPADDRESS/$(hostname -I | cut -f1 -d' ')/" ${DIETPIROOT}/boot/Automation_Custom_Script.sh
 
 umount "${DIETPIROOT}"
 
