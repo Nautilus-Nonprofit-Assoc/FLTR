@@ -14,3 +14,4 @@
 - [Energized Protection](https://github.com/EnergizedProtection/block)
 - [Loaded font by Andrew Wilson](https://www.fontsquirrel.com/license/loaded)
 - [Logo by Freepik](https://www.freepik.com/free-photos-vectors/logo)
+- [oxdpus](https://github.com/sematext/oxdpus)

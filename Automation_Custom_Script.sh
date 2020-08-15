@@ -1,7 +1,15 @@
 #!/bin/bash
 
+# bugfix, see: https://github.com/MichaIng/DietPi/issues/3716
+test -f /var/lib/dietpi/license.txt && mv /var/lib/dietpi/license.txt /var/lib/dietpi/license.accepted && sleep 10
+
 # install all prerequisites
-DEBIAN_FRONTEND=noninteractive apt -t buster-backports install -y -qq git golang-go iptables iptables-persistent netfilter-persistent dnsutils screen build-essential libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config
+apt update -qq && apt upgrade -y -qq
+DEBIAN_FRONTEND=noninteractive apt -t buster-backports install -y -qq git golang-go python3 iptables iptables-persistent netfilter-persistent dnsutils screen build-essential make gcc libc6-dev libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config
+
+# run on system boot
+echo '#!/bin/bash' > /etc/rc.local
+chmod +x /etc/rc.local
 
 # run twice daily
 mkdir -p /etc/fltr
@@ -221,9 +229,11 @@ ${BIP} www.bing.com bing.com
 EOF
 
 # reset /etc/hosts
+printf "\n# reset hosts\n" >> /etc/fltr/cron_twice_daily.sh
 echo 'printf "# Host Addresses\n127.0.0.1 localhost\n::1 localhost ip6-localhost ip6-loopback\n\n" > /etc/hosts' >> /etc/fltr/cron_twice_daily.sh
 
 # add Safe Search to /etc/hosts
+printf "\n# safe search\n" >> /etc/fltr/cron_twice_daily.sh
 echo "cat /etc/fltr/safesearch >> /etc/hosts" >> /etc/fltr/cron_twice_daily.sh
 
 # DuckDuckGo Safe Search is a special case - see: https://www.reddit.com/r/duckduckgo/comments/8qwzyl/feature_request_allow_network_operators_for_force/
@@ -231,7 +241,39 @@ dig duckduckgo.com
 dig safe.duckduckgo.com
 echo 'printf "$(dig +short safe.duckduckgo.com | tail -n 1) www.duckduckgo.com duckduckgo.com\n\n" >> /etc/hosts' >> /etc/fltr/cron_twice_daily.sh
 
-# activate Safe Search
+# ip lists
+mkdir /etc/fltr/doh
+curl -sLo /etc/fltr/doh/scrape-doh-providers.py https://gist.githubusercontent.com/Ben-L-E/52e607ff6b3405beb4d534f1e261d222/raw/bac0b90ef01b6f9d69462512327fd4ff903a9a3f/scrape-doh-providers.py
+mkdir /etc/fltr/iplists
+cat >> /etc/fltr/cron_twice_daily.sh <<EOF
+
+# doh
+curl -sLo /etc/fltr/doh/doh.txt https://raw.githubusercontent.com/Nautilus-Nonprofit-Assoc/FLTR/master/doh.txt
+python3 /etc/fltr/doh/scrape-doh-providers.py '"{}".format(o["url"])' > /etc/fltr/doh/doh-urls.txt
+while read url ; do curl -vsm 1 "\$url" 2>&1 | grep Trying | sed 's/\*.*Trying //g' | sed 's/\.\.\.//g' >> /etc/fltr/doh/doh-ips.txt ; done < /etc/fltr/doh/doh-urls.txt
+sort -u /etc/fltr/doh/doh.txt /etc/fltr/doh/doh-ips.txt > /etc/fltr/iplists/doh.ipset
+rm /etc/fltr/doh/*.txt
+
+# ip lists
+curl -sLo /etc/fltr/iplists/bambenek_c2.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/bambenek_c2.ipset
+curl -sLo /etc/fltr/iplists/bi_any_1_7d.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/bi_any_1_7d.ipset
+curl -sLo /etc/fltr/iplists/blocklist_de.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/blocklist_de.ipset
+curl -sLo /etc/fltr/iplists/dshield.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/dshield.netset
+curl -sLo /etc/fltr/iplists/et_tor.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/et_tor.ipset
+curl -sLo /etc/fltr/iplists/firehol_anonymous.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/firehol_anonymous.netset
+curl -sLo /etc/fltr/iplists/greensnow.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/greensnow.ipset
+curl -sLo /etc/fltr/iplists/iblocklist_abuse_palevo.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/iblocklist_abuse_palevo.netset
+curl -sLo /etc/fltr/iplists/iblocklist_onion_router.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/iblocklist_onion_router.netset
+curl -sLo /etc/fltr/iplists/iblocklist_pedophiles.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/iblocklist_pedophiles.netset
+curl -sLo /etc/fltr/iplists/malwaredomainlist.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/malwaredomainlist.ipset
+curl -sLo /etc/fltr/iplists/nullsecure.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/nullsecure.ipset
+curl -sLo /etc/fltr/iplists/talosintel_ipfilter.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/talosintel_ipfilter.ipset
+curl -sLo /etc/fltr/iplists/threatcrowd.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/threatcrowd.ipset
+curl -sLo /etc/fltr/iplists/yoyo_adservers.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/yoyo_adservers.ipset
+
+EOF
+
+# activate Safe Search and ip lists
 /etc/fltr/cron_twice_daily.sh
 
 # install and configure CoreDNS
@@ -322,7 +364,43 @@ iptables-save > /etc/iptables/rules.v4
 ip6tables-save > /etc/iptables/rules.v6
 systemctl start netfilter-persistent.service && systemctl enable netfilter-persistent.service
 
+# go
+mkdir /root/go && export GOPATH=/root/go
+
 # install bettercap
 cd /root
 go get -u github.com/bettercap/bettercap
-mv /root/go/bin/bettercap /usr/local/bin && rm -rf /root/go
+mv /root/go/bin/bettercap /usr/local/bin
+
+# increase nofile limit
+echo "fs.file-max = 4194304" >> /etc/sysctl.d/local.conf
+echo "fs.nr_open = 4194304" >> /etc/sysctl.d/local.conf
+sysctl -p /etc/sysctl.d/local.conf
+ulimit -n 4194304
+sed -i "s/# End of file//" /etc/security/limits.conf
+printf "\n* - nofile 4194304\nroot - nofile 4194304\n" >> /etc/security/limits.conf
+printf "\nulimit -n 4194304\n" >> ~/.bashrc
+
+# install oxdpus
+git clone https://github.com/Ben-L-E/oxdpus.git --branch dev --single-branch
+cd oxdpus
+make go
+mv /root/oxdpus/cmd/oxdpus/oxdpus /usr/local/bin
+cd /root && rm -rf /root/oxdpus
+cat > /lib/systemd/system/oxdpus.service <<EOF
+[Unit]
+Description=oxdpus service
+After=network.target
+[Service]
+Type=oneshot
+LimitNOFILE=4194304
+ExecStart=/usr/local/bin/oxdpus attach --dev=eth0
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl start oxdpus.service && systemctl enable oxdpus.service
+
+# cleanup
+apt purge -y -qq build-essential make gcc libc6-dev libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config
+apt autopurge -y
+rm -rf /root/go

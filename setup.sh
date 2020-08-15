@@ -21,6 +21,7 @@ sed -i "s/CONFIG_AUTO_DIETPI_UPDATES=.*/CONFIG_AUTO_DIETPI_UPDATES=1/" ${DIETPIR
 sed -i "s/CONFIG_WIFI_COUNTRY_CODE=.*/CONFIG_WIFI_COUNTRY_CODE=US/" ${DIETPIROOT}/boot/dietpi.txt
 sed -i "s/CONFIG_SERIAL_CONSOLE_ENABLE=.*/CONFIG_SERIAL_CONSOLE_ENABLE=0/" ${DIETPIROOT}/boot/dietpi.txt
 sed -i "s/CONFIG_ENABLE_IPV6=.*/CONFIG_ENABLE_IPV6=0/" ${DIETPIROOT}/boot/dietpi.txt
+sed -i "s/AUTO_SETUP_HEADLESS=.*/AUTO_SETUP_HEADLESS=1/" ${DIETPIROOT}/boot/dietpi.txt
 
 cp Automation_Custom_Script.sh ${DIETPIROOT}/boot/ || { echo "Error: automation script copy failed."; exit; }
 
