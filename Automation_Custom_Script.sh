@@ -5,7 +5,7 @@ test -f /var/lib/dietpi/license.txt && mv /var/lib/dietpi/license.txt /var/lib/d
 
 # install all prerequisites
 apt update -qq && apt upgrade -y -qq
-DEBIAN_FRONTEND=noninteractive apt -t buster-backports install -y -qq git golang-go python3 iptables iptables-persistent netfilter-persistent dnsutils screen build-essential make gcc libc6-dev libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config
+DEBIAN_FRONTEND=noninteractive apt -t buster-backports install -y -qq git golang-go iptables iptables-persistent netfilter-persistent dnsutils sipcalc screen build-essential make gcc libc6-dev libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config
 
 # run on system boot
 echo '#!/bin/bash' > /etc/rc.local
@@ -241,39 +241,7 @@ dig duckduckgo.com
 dig safe.duckduckgo.com
 echo 'printf "$(dig +short safe.duckduckgo.com | tail -n 1) www.duckduckgo.com duckduckgo.com\n\n" >> /etc/hosts' >> /etc/fltr/cron_twice_daily.sh
 
-# ip lists
-mkdir /etc/fltr/doh
-curl -sLo /etc/fltr/doh/scrape-doh-providers.py https://gist.githubusercontent.com/Ben-L-E/52e607ff6b3405beb4d534f1e261d222/raw/bac0b90ef01b6f9d69462512327fd4ff903a9a3f/scrape-doh-providers.py
-mkdir /etc/fltr/iplists
-cat >> /etc/fltr/cron_twice_daily.sh <<EOF
-
-# doh
-curl -sLo /etc/fltr/doh/doh.txt https://raw.githubusercontent.com/Nautilus-Nonprofit-Assoc/FLTR/master/doh.txt
-python3 /etc/fltr/doh/scrape-doh-providers.py '"{}".format(o["url"])' > /etc/fltr/doh/doh-urls.txt
-while read url ; do curl -vsm 1 "\$url" 2>&1 | grep Trying | sed 's/\*.*Trying //g' | sed 's/\.\.\.//g' >> /etc/fltr/doh/doh-ips.txt ; done < /etc/fltr/doh/doh-urls.txt
-sort -u /etc/fltr/doh/doh.txt /etc/fltr/doh/doh-ips.txt > /etc/fltr/iplists/doh.ipset
-rm /etc/fltr/doh/*.txt
-
-# ip lists
-curl -sLo /etc/fltr/iplists/bambenek_c2.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/bambenek_c2.ipset
-curl -sLo /etc/fltr/iplists/bi_any_1_7d.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/bi_any_1_7d.ipset
-curl -sLo /etc/fltr/iplists/blocklist_de.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/blocklist_de.ipset
-curl -sLo /etc/fltr/iplists/dshield.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/dshield.netset
-curl -sLo /etc/fltr/iplists/et_tor.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/et_tor.ipset
-curl -sLo /etc/fltr/iplists/firehol_anonymous.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/firehol_anonymous.netset
-curl -sLo /etc/fltr/iplists/greensnow.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/greensnow.ipset
-curl -sLo /etc/fltr/iplists/iblocklist_abuse_palevo.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/iblocklist_abuse_palevo.netset
-curl -sLo /etc/fltr/iplists/iblocklist_onion_router.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/iblocklist_onion_router.netset
-curl -sLo /etc/fltr/iplists/iblocklist_pedophiles.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/iblocklist_pedophiles.netset
-curl -sLo /etc/fltr/iplists/malwaredomainlist.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/malwaredomainlist.ipset
-curl -sLo /etc/fltr/iplists/nullsecure.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/nullsecure.ipset
-curl -sLo /etc/fltr/iplists/talosintel_ipfilter.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/talosintel_ipfilter.ipset
-curl -sLo /etc/fltr/iplists/threatcrowd.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/threatcrowd.ipset
-curl -sLo /etc/fltr/iplists/yoyo_adservers.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/yoyo_adservers.ipset
-
-EOF
-
-# activate Safe Search and ip lists
+# activate Safe Search
 /etc/fltr/cron_twice_daily.sh
 
 # install and configure CoreDNS
@@ -294,7 +262,7 @@ cat > /etc/coredns/Corefile <<EOF
     fallthrough
   }
   rewrite name prefix _esni. nope.
-  forward . tls://185.228.168.168 tls://185.228.169.168 {
+  forward . tls://185.228.169.168 {
     tls_servername family-filter-dns.cleanbrowsing.org
     health_check 5s
   }
@@ -319,7 +287,7 @@ User=root
 WorkingDirectory=/etc/coredns
 ExecStartPre=/sbin/setcap cap_net_bind_service=+ep /usr/local/bin/coredns
 ExecStart=/usr/local/bin/coredns -pidfile /etc/coredns/coredns.pid -conf=/etc/coredns/Corefile
-ExecReload=/bin/kill -SIGUSR1 $MAINPID
+ExecReload=/bin/kill -SIGUSR1 \$MAINPID
 Restart=always
 RestartSec=10
 [Install]
@@ -399,6 +367,107 @@ ExecStart=/usr/local/bin/oxdpus attach --dev=eth0
 WantedBy=multi-user.target
 EOF
 systemctl start oxdpus.service && systemctl enable oxdpus.service
+
+# initialize ip lists
+touch /etc/fltr/current.iplist
+cat > /etc/fltr/refresh-iplists.sh <<EOF
+#!/bin/bash
+
+# workspace
+test -d /tmp/iplists && rm -rf /tmp/iplists
+mkdir /tmp/iplists
+
+# doh
+curl -sLo /tmp/iplists/doh.txt https://raw.githubusercontent.com/Nautilus-Nonprofit-Assoc/FLTR/master/doh.txt
+curl -sL https://raw.githubusercontent.com/wiki/curl/curl/DNS-over-HTTPS.md | grep '^|.*\$' | cut -d'|' -f3 | grep -o 'http.*\$' | tr " " "\n" | grep -o 'http.*\$' | sed 's/[)].*\$//' | sed 's/[<].*\$//' | egrep -v '(my.nextdns.io|blog.cloudflare.com)' > /tmp/iplists/doh-urls.txt
+while read url ; do curl -vsm 1 "\$url" 2>&1 | grep Trying | sed 's/\*.*Trying //g' | sed 's/\.\.\.//g' | sed '/:/d' >> /tmp/iplists/doh-ips.txt ; done < /tmp/iplists/doh-urls.txt
+sort -u /tmp/iplists/doh.txt /tmp/iplists/doh-ips.txt > /tmp/iplists/doh.iplist
+rm /tmp/iplists/*.txt
+
+# ip lists
+#curl -sLo /tmp/iplists/bambenek_c2.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/bambenek_c2.ipset
+#curl -sLo /tmp/iplists/bi_any_1_7d.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/bi_any_1_7d.ipset
+#curl -sLo /tmp/iplists/blocklist_de.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/blocklist_de.ipset
+#curl -sLo /tmp/iplists/dshield.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/dshield.netset
+#curl -sLo /tmp/iplists/et_tor.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/et_tor.ipset
+#curl -sLo /tmp/iplists/firehol_anonymous.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/firehol_anonymous.netset
+#curl -sLo /tmp/iplists/greensnow.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/greensnow.ipset
+#curl -sLo /tmp/iplists/iblocklist_abuse_palevo.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/iblocklist_abuse_palevo.netset
+#curl -sLo /tmp/iplists/iblocklist_onion_router.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/iblocklist_onion_router.netset
+#curl -sLo /tmp/iplists/iblocklist_pedophiles.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/iblocklist_pedophiles.netset
+#curl -sLo /tmp/iplists/malwaredomainlist.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/malwaredomainlist.ipset
+#curl -sLo /tmp/iplists/nullsecure.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/nullsecure.ipset
+#curl -sLo /tmp/iplists/talosintel_ipfilter.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/talosintel_ipfilter.ipset
+#curl -sLo /tmp/iplists/threatcrowd.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/threatcrowd.ipset
+#curl -sLo /tmp/iplists/yoyo_adservers.iplist https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/yoyo_adservers.ipset
+
+# combine and clean
+cat /tmp/iplists/*.iplist > /tmp/iplist
+rm -rf /tmp/iplists
+sort -u /tmp/iplist > /tmp/new.iplist
+rm /tmp/iplist
+sed -i '/^#.*\$/d' /tmp/new.iplist
+sed -i '/^[[:space:]]*\$/d' /tmp/new.iplist
+
+# compare
+diff --unified --suppress-common-lines --ignore-blank-lines --ignore-matching-lines='^#.*' /etc/fltr/current.iplist /tmp/new.iplist > /tmp/iplist.diff
+sed -i '1,3d' /tmp/iplist.diff
+grep - /tmp/iplist.diff | sed 's/-//g' > /tmp/remove.iplist
+grep + /tmp/iplist.diff | sed 's/+//g' > /tmp/add.iplist
+rm /tmp/iplist.diff
+
+# remove (easier to loop than track state)
+while read ip; do
+  for i in {1..46}; do
+    oxdpus remove --ip=\$ip --map=\$i
+  done
+done </tmp/remove.iplist
+rm /tmp/remove.iplist
+
+# add (ignoring non-routable IP addresses)
+ipcounter=\$(oxdpus list | wc -l)
+mapcounter=\$(echo "(\$ipcounter/65536)+1" | bc)
+while read ip; do
+  if ! [[ \$ip =~ ((^0\.)|(^10\.)|(^100\.6[4-9]\.)|(^100\.[7-9]\d\.)|(^100\.1[0-1]\d\.)|(^100\.12[0-7]\.)|(^127\.)|(^169\.254\.)|(^172\.1[6-9]\.)|(^172\.2[0-9]\.)|(^172\.3[0-1]\.)|(^192\.0\.0\.)|(^192\.0\.2\.)|(^192\.88\.99\.)|(^192\.168\.)|(^198\.1[8-9]\.)|(^198\.51\.100\.)|(^203.0\.113\.)|(^22[4-9]\.)|(^23[0-9]\.)|(^24[0-9]\.)|(^25[0-5]\.)).*\$ ]] && [[ \$ip =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}(\/([1-9]|[1-2][0-9]|3[0-2]))?\$ ]] ; then
+    ipcount=\$(sipcalc \$ip | grep 'Addresses in network' | awk -F " " '{print \$NF}')
+    (( ipcounter += ipcount ))
+    if (( ipcounter > 65536 )); then
+      ipcounter=\$ipcount
+      (( mapcounter += 1 ))
+    fi
+    timeout 5 oxdpus add --ip=\$ip --map=\$mapcounter
+  fi
+done </tmp/add.iplist
+rm /tmp/add.iplist
+
+mv /tmp/new.iplist /etc/fltr/current.iplist
+EOF
+
+chmod +x /etc/fltr/refresh-iplists.sh
+printf "\n# refresh ip lists\nscreen -S refresh-iplists -d -m /etc/fltr/refresh-iplists.sh\n" >> /etc/fltr/cron_twice_daily.sh
+screen -S refresh-iplists -d -m /etc/fltr/refresh-iplists.sh
+
+# load full ip list upon startup (since XDP programs are only stored in volatile memory)
+cat > /etc/fltr/load-iplists.sh <<EOF
+#!/bin/bash
+
+ipcounter=\$(oxdpus list | wc -l)
+mapcounter=\$(echo "(\$ipcounter/65536)+1" | bc)
+while read ip; do
+  if ! [[ \$ip =~ ((^0\.)|(^10\.)|(^100\.6[4-9]\.)|(^100\.[7-9]\d\.)|(^100\.1[0-1]\d\.)|(^100\.12[0-7]\.)|(^127\.)|(^169\.254\.)|(^172\.1[6-9]\.)|(^172\.2[0-9]\.)|(^172\.3[0-1]\.)|(^192\.0\.0\.)|(^192\.0\.2\.)|(^192\.88\.99\.)|(^192\.168\.)|(^198\.1[8-9]\.)|(^198\.51\.100\.)|(^203.0\.113\.)|(^22[4-9]\.)|(^23[0-9]\.)|(^24[0-9]\.)|(^25[0-5]\.)).*\$ ]] && [[ \$ip =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}(\/([1-9]|[1-2][0-9]|3[0-2]))?\$ ]] ; then
+    ipcount=\$(sipcalc \$ip | grep 'Addresses in network' | awk -F " " '{print \$NF}')
+    (( ipcounter += ipcount ))
+    if (( ipcounter > 65536 )); then
+      ipcounter=\$ipcount
+      (( mapcounter += 1 ))
+    fi
+    timeout 5 oxdpus add --ip=\$ip --map=\$mapcounter
+  fi
+done </etc/fltr/current.iplist
+EOF
+
+chmod +x /etc/fltr/load-iplists.sh
+printf "\n# load ip lists\nscreen -S load-iplists -d -m /etc/fltr/load-iplists.sh\n" >> /etc/rc.local
 
 # cleanup
 apt purge -y -qq build-essential make gcc libc6-dev libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config
