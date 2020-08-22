@@ -5,7 +5,7 @@ test -f /var/lib/dietpi/license.txt && mv /var/lib/dietpi/license.txt /var/lib/d
 
 # install all prerequisites
 apt update -qq && apt upgrade -y -qq
-DEBIAN_FRONTEND=noninteractive apt -t buster-backports install -y -qq git golang-go iptables iptables-persistent netfilter-persistent dnsutils sipcalc screen build-essential make gcc libc6-dev libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config
+DEBIAN_FRONTEND=noninteractive apt -t buster-backports install -y -qq git golang-go iptables iptables-persistent netfilter-persistent dnsutils sipcalc screen libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config build-essential make gcc libc6-dev
 
 # run on system boot
 echo '#!/bin/bash' > /etc/rc.local
@@ -469,7 +469,12 @@ EOF
 chmod +x /etc/fltr/load-iplists.sh
 printf "\n# load ip lists\nscreen -S load-iplists -d -m /etc/fltr/load-iplists.sh\n" >> /etc/rc.local
 
+# arp - dev (change IP to your desired target)
+#screen -d -m bettercap -eval "set arp.spoof.targets 192.168.31.91; arp.spoof on"
+# arp - prod
+#screen -d -m bettercap -eval "arp.spoof on"
+
 # cleanup
-apt purge -y -qq build-essential make gcc libc6-dev libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config
+apt purge -y -qq build-essential make gcc libc6-dev
 apt autopurge -y
 rm -rf /root/go
