@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # bugfix, see: https://github.com/MichaIng/DietPi/issues/3716
-test -f /var/lib/dietpi/license.txt && mv /var/lib/dietpi/license.txt /var/lib/dietpi/license.accepted && sleep 10
+#test -f /var/lib/dietpi/license.txt && mv /var/lib/dietpi/license.txt /var/lib/dietpi/license.accepted && sleep 10
 
 # install all prerequisites
 apt update -qq && apt upgrade -y -qq
-DEBIAN_FRONTEND=noninteractive apt -t buster-backports install -y -qq git golang-go iptables iptables-persistent netfilter-persistent dnsutils sipcalc screen libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config build-essential make gcc libc6-dev
+DEBIAN_FRONTEND=noninteractive apt -t buster-backports install -y -qq git golang-go iptables iptables-persistent netfilter-persistent resolvconf dnsutils sipcalc screen libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config libc6-dev build-essential make gcc
 
 # run on system boot
 echo '#!/bin/bash' > /etc/rc.local
@@ -296,9 +296,12 @@ EOF
 
 service coredns start && systemctl enable coredns
 
-# networking config
-sed -i 's/#net\.ipv4\.ip_forward=.*/net.ipv4.ip_forward=1/' /etc/sysctl.conf
-sysctl -p /etc/sysctl.conf
+# sysctl config
+echo "fs.file-max = 4194304" >> /etc/sysctl.d/local.conf
+echo "fs.nr_open = 4194304" >> /etc/sysctl.d/local.conf
+echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.d/local.conf
+echo "net.core.bpf_jit_enable = 1" >> /etc/sysctl.d/local.conf
+sysctl -p /etc/sysctl.d/local.conf
 
 # force local DNS traffic through CoreDNS
 echo "nameserver 127.0.0.1" > /etc/resolv.conf
@@ -332,6 +335,18 @@ iptables-save > /etc/iptables/rules.v4
 ip6tables-save > /etc/iptables/rules.v6
 systemctl start netfilter-persistent.service && systemctl enable netfilter-persistent.service
 
+# increase nofile limit
+ulimit -n 4194304
+
+# increase memlock limit
+ulimit -l unlimited
+
+# persist changes
+sed -i "s/# End of file//" /etc/security/limits.conf
+printf "\n* - nofile 4194304\nroot - nofile 4194304\n" >> /etc/security/limits.conf
+printf "\n* - memlock unlimited\nroot - memlock unlimited\n" >> /etc/security/limits.conf
+printf "\nulimit -n 4194304\nulimit -l unlimited\n" >> ~/.bashrc
+
 # go
 mkdir /root/go && export GOPATH=/root/go
 
@@ -339,15 +354,6 @@ mkdir /root/go && export GOPATH=/root/go
 cd /root
 go get -u github.com/bettercap/bettercap
 mv /root/go/bin/bettercap /usr/local/bin
-
-# increase nofile limit
-echo "fs.file-max = 4194304" >> /etc/sysctl.d/local.conf
-echo "fs.nr_open = 4194304" >> /etc/sysctl.d/local.conf
-sysctl -p /etc/sysctl.d/local.conf
-ulimit -n 4194304
-sed -i "s/# End of file//" /etc/security/limits.conf
-printf "\n* - nofile 4194304\nroot - nofile 4194304\n" >> /etc/security/limits.conf
-printf "\nulimit -n 4194304\n" >> ~/.bashrc
 
 # install oxdpus
 git clone https://github.com/Ben-L-E/oxdpus.git --branch dev --single-branch
@@ -447,7 +453,7 @@ chmod +x /etc/fltr/refresh-iplists.sh
 printf "\n# refresh ip lists\nscreen -S refresh-iplists -d -m /etc/fltr/refresh-iplists.sh\n" >> /etc/fltr/cron_twice_daily.sh
 screen -S refresh-iplists -d -m /etc/fltr/refresh-iplists.sh
 
-# load full ip list upon startup (since XDP programs are only stored in volatile memory)
+# load full ip list upon startup
 cat > /etc/fltr/load-iplists.sh <<EOF
 #!/bin/bash
 
@@ -469,12 +475,12 @@ EOF
 chmod +x /etc/fltr/load-iplists.sh
 printf "\n# load ip lists\nscreen -S load-iplists -d -m /etc/fltr/load-iplists.sh\n" >> /etc/rc.local
 
+# cleanup
+apt purge -y -qq build-essential make gcc
+apt autopurge -y
+rm -rf /root/go
+
 # arp - dev (change IP to your desired target)
 #screen -d -m bettercap -eval "set arp.spoof.targets 192.168.31.91; arp.spoof on"
 # arp - prod
 #screen -d -m bettercap -eval "arp.spoof on"
-
-# cleanup
-apt purge -y -qq build-essential make gcc libc6-dev
-apt autopurge -y
-rm -rf /root/go
