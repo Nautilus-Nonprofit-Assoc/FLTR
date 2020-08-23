@@ -1,8 +1,20 @@
 #!/bin/bash
 
-DIETPIROOT=$1
-PASSWORD=${2:-FLTR}
-SURVEY=$(test $3 && echo 0 || echo 1)
+if [ "$EUID" -ne 0 ] ; then
+  echo "Please run with sudo"
+  exit
+fi
+
+PASSWORD=${1:-FLTR}
+SURVEY=$(test $2 && echo 0 || echo 1)
+DIETPIROOT=$3
+MOUNTDEV=
+
+if [ $(mount | grep media | wc -l) -eq 1 ] ; then
+  DIETPIROOT=$(mount | grep media | cut -d' ' -f3)
+  MOUNTDEV=$(mount | grep media | cut -d' ' -f1)
+fi
+
 TIMEZONE=$(test -f /etc/timezone && cat /etc/timezone || echo "America/Los_Angeles")
 
 test -f ${DIETPIROOT}/boot/dietpi.txt || { echo "Error: dietpi.txt not found."; exit; }
@@ -26,5 +38,6 @@ sed -i "s/AUTO_SETUP_HEADLESS=.*/AUTO_SETUP_HEADLESS=1/" ${DIETPIROOT}/boot/diet
 cp Automation_Custom_Script.sh ${DIETPIROOT}/boot/ || { echo "Error: automation script copy failed."; exit; }
 
 umount "${DIETPIROOT}"
+eject "${MOUNTDEV}"
 
 echo "Success! You may now transfer the eMMC/microSD to the hardware device, connect an Ethernet cable, and power it on.  Initial setup process may take up to 10 minutes, please be patient."
