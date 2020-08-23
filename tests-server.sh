@@ -23,12 +23,12 @@ APPLECIDR="$(dig +short captive.apple.com | tail -n 1 | cut -d. -f-3).0/24"
 (curl -sm 1 example.com | grep -q "illustrative" && echo "oxdpus test 1/7: PASS" || echo "oxdpus test 1/7: FAIL") >> results.txt
 (curl -sm 1 captive.apple.com | grep -q "Success" && echo "oxdpus test 2/7: PASS" || echo "oxdpus test 2/7: FAIL") >> results.txt
 (test $(oxdpus list | wc -l) -gt 100 && echo "oxdpus test 3/7: PASS" || echo "oxdpus test 3/7: FAIL") >> results.txt
-oxdpus add --map=46 --ip=$EXAMPLEIP > /dev/null 2>&1
-oxdpus add --map=46 --ip=$APPLECIDR > /dev/null 2>&1
+oxdpus add --ip=$EXAMPLEIP > /dev/null 2>&1
+oxdpus add --ip=$APPLECIDR > /dev/null 2>&1
 (curl -sm 1 example.com | grep -q "illustrative" && echo "oxdpus test 4/7: FAIL" || echo "oxdpus test 4/7: PASS") >> results.txt
 (curl -sm 1 captive.apple.com | grep -q "Success" && echo "oxdpus test 5/7: FAIL" || echo "oxdpus test 5/7: PASS") >> results.txt
-oxdpus remove --map=46 --ip=$EXAMPLEIP > /dev/null 2>&1
-oxdpus remove --map=46 --ip=$APPLECIDR > /dev/null 2>&1
+oxdpus remove --ip=$EXAMPLEIP > /dev/null 2>&1
+oxdpus remove --ip=$APPLECIDR > /dev/null 2>&1
 (curl -sm 1 example.com | grep -q "illustrative" && echo "oxdpus test 6/7: PASS" || echo "oxdpus test 6/7: FAIL") >> results.txt
 (curl -sm 1 captive.apple.com | grep -q "Success" && echo "oxdpus test 7/7: PASS" || echo "oxdpus test 7/7: FAIL") >> results.txt
 
