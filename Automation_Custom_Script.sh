@@ -5,7 +5,7 @@
 
 # install all prerequisites
 apt update -qq && apt upgrade -y -qq
-DEBIAN_FRONTEND=noninteractive apt -t buster-backports install -y -qq git golang-go iptables iptables-persistent netfilter-persistent resolvconf dnsutils sipcalc screen libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config libc6-dev build-essential make gcc
+DEBIAN_FRONTEND=noninteractive apt -t buster-backports install -y -qq git golang-go iptables iptables-persistent netfilter-persistent resolvconf dnsutils screen libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config libc6-dev build-essential make gcc
 
 # run on system boot
 echo '#!/bin/bash' > /etc/rc.local
@@ -356,7 +356,7 @@ go get -u github.com/bettercap/bettercap
 mv /root/go/bin/bettercap /usr/local/bin
 
 # install oxdpus
-git clone https://github.com/Ben-L-E/oxdpus.git --branch dev --single-branch
+git clone https://github.com/mrbluecoat/oxdpus.git
 cd oxdpus
 make go
 mv /root/oxdpus/cmd/oxdpus/oxdpus /usr/local/bin
@@ -422,26 +422,16 @@ grep - /tmp/iplist.diff | sed 's/-//g' > /tmp/remove.iplist
 grep + /tmp/iplist.diff | sed 's/+//g' > /tmp/add.iplist
 rm /tmp/iplist.diff
 
-# remove (easier to loop than track state)
+# remove
 while read ip; do
-  for i in {1..46}; do
-    oxdpus remove --ip=\$ip --map=\$i
-  done
+  oxdpus remove --ip=\$ip
 done </tmp/remove.iplist
 rm /tmp/remove.iplist
 
 # add (ignoring non-routable IP addresses)
-ipcounter=\$(oxdpus list | wc -l)
-mapcounter=\$(echo "(\$ipcounter/65536)+1" | bc)
 while read ip; do
   if ! [[ \$ip =~ ((^0\.)|(^10\.)|(^100\.6[4-9]\.)|(^100\.[7-9]\d\.)|(^100\.1[0-1]\d\.)|(^100\.12[0-7]\.)|(^127\.)|(^169\.254\.)|(^172\.1[6-9]\.)|(^172\.2[0-9]\.)|(^172\.3[0-1]\.)|(^192\.0\.0\.)|(^192\.0\.2\.)|(^192\.88\.99\.)|(^192\.168\.)|(^198\.1[8-9]\.)|(^198\.51\.100\.)|(^203.0\.113\.)|(^22[4-9]\.)|(^23[0-9]\.)|(^24[0-9]\.)|(^25[0-5]\.)).*\$ ]] && [[ \$ip =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}(\/([1-9]|[1-2][0-9]|3[0-2]))?\$ ]] ; then
-    ipcount=\$(sipcalc \$ip | grep 'Addresses in network' | awk -F " " '{print \$NF}')
-    (( ipcounter += ipcount ))
-    if (( ipcounter > 65536 )); then
-      ipcounter=\$ipcount
-      (( mapcounter += 1 ))
-    fi
-    timeout 5 oxdpus add --ip=\$ip --map=\$mapcounter
+    timeout 15 oxdpus add --ip=\$ip
   fi
 done </tmp/add.iplist
 rm /tmp/add.iplist
@@ -457,17 +447,9 @@ screen -S refresh-iplists -d -m /etc/fltr/refresh-iplists.sh
 cat > /etc/fltr/load-iplists.sh <<EOF
 #!/bin/bash
 
-ipcounter=\$(oxdpus list | wc -l)
-mapcounter=\$(echo "(\$ipcounter/65536)+1" | bc)
 while read ip; do
   if ! [[ \$ip =~ ((^0\.)|(^10\.)|(^100\.6[4-9]\.)|(^100\.[7-9]\d\.)|(^100\.1[0-1]\d\.)|(^100\.12[0-7]\.)|(^127\.)|(^169\.254\.)|(^172\.1[6-9]\.)|(^172\.2[0-9]\.)|(^172\.3[0-1]\.)|(^192\.0\.0\.)|(^192\.0\.2\.)|(^192\.88\.99\.)|(^192\.168\.)|(^198\.1[8-9]\.)|(^198\.51\.100\.)|(^203.0\.113\.)|(^22[4-9]\.)|(^23[0-9]\.)|(^24[0-9]\.)|(^25[0-5]\.)).*\$ ]] && [[ \$ip =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}(\/([1-9]|[1-2][0-9]|3[0-2]))?\$ ]] ; then
-    ipcount=\$(sipcalc \$ip | grep 'Addresses in network' | awk -F " " '{print \$NF}')
-    (( ipcounter += ipcount ))
-    if (( ipcounter > 65536 )); then
-      ipcounter=\$ipcount
-      (( mapcounter += 1 ))
-    fi
-    timeout 5 oxdpus add --ip=\$ip --map=\$mapcounter
+    timeout 15 oxdpus add --ip=\$ip
   fi
 done </etc/fltr/current.iplist
 EOF
