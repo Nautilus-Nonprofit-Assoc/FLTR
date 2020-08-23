@@ -294,7 +294,7 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-service coredns start && systemctl enable coredns
+systemctl start coredns && systemctl enable coredns
 
 # sysctl config
 echo "fs.file-max = 4194304" >> /etc/sysctl.d/local.conf
