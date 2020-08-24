@@ -357,7 +357,7 @@ go get -u github.com/bettercap/bettercap
 mv /root/go/bin/bettercap /usr/local/bin
 
 # install oxdpus
-git clone https://github.com/mrbluecoat/oxdpus.git
+git clone https://github.com/sematext/oxdpus.git
 cd oxdpus
 make go
 mv /root/oxdpus/cmd/oxdpus/oxdpus /usr/local/bin
