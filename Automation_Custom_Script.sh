@@ -4,8 +4,9 @@
 #test -f /var/lib/dietpi/license.txt && mv /var/lib/dietpi/license.txt /var/lib/dietpi/license.accepted && sleep 10
 
 # install all prerequisites
-apt update -qq && apt upgrade -y -qq
-DEBIAN_FRONTEND=noninteractive apt -t buster-backports install -y -qq git golang-go iptables iptables-persistent netfilter-persistent resolvconf dnsutils screen libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config libc6-dev build-essential make gcc
+apt update -yqq > /dev/null
+apt upgrade -yqq > /dev/null
+DEBIAN_FRONTEND=noninteractive apt -t buster-backports install -yqq git golang-go iptables iptables-persistent netfilter-persistent resolvconf dnsutils screen libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config libc6-dev build-essential make gcc > /dev/null
 
 # run on system boot
 echo '#!/bin/bash' > /etc/rc.local
@@ -458,11 +459,11 @@ chmod +x /etc/fltr/load-iplists.sh
 printf "\n# load ip lists\nscreen -S load-iplists -d -m /etc/fltr/load-iplists.sh\n" >> /etc/rc.local
 
 # cleanup
-apt purge -y -qq build-essential make gcc
-apt autopurge -y
-rm -rf /root/go
+#apt purge -yqq build-essential make gcc > /dev/null
+#apt autopurge -y
+#rm -rf /root/go
 
 # arp - dev (change IP to your desired target)
-#screen -d -m bettercap -eval "set arp.spoof.targets 192.168.31.91; arp.spoof on"
+#screen -S arpspoof -d -m bettercap -eval "set arp.spoof.targets 192.168.31.91; arp.spoof on"
 # arp - prod
-#screen -d -m bettercap -eval "arp.spoof on"
+#screen -S arpspoof -d -m bettercap -eval "arp.spoof on"
