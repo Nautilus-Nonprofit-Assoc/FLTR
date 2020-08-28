@@ -8,6 +8,10 @@ apt update -yqq > /dev/null
 apt upgrade -yqq > /dev/null
 DEBIAN_FRONTEND=noninteractive apt -t buster-backports install -yqq git golang-go iptables iptables-persistent netfilter-persistent resolvconf dnsutils screen libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config libc6-dev build-essential make gcc > /dev/null
 
+# use iptables vs. nftables for performance reasons
+update-alternatives --set iptables /usr/sbin/iptables-legacy
+update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+
 # run on system boot
 echo '#!/bin/bash' > /etc/rc.local
 chmod +x /etc/rc.local
@@ -309,10 +313,6 @@ echo "nameserver 127.0.0.1" > /etc/resolv.conf
 sed -i 's/#prepend\sdomain-name-servers.*/prepend domain-name-servers 127.0.0.1;/' /etc/dhcp/dhclient.conf
 > /etc/resolvconf/resolv.conf.d/head
 > /etc/resolvconf/resolv.conf.d/tail
-
-# use iptables vs. nftables for performance reasons
-update-alternatives --set iptables /usr/sbin/iptables-legacy
-update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
 
 # prevent SSH brute forcing
 iptables -A INPUT -p tcp -s 224.0.0.0/4 --dport ssh -j ACCEPT

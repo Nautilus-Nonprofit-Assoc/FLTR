@@ -6,8 +6,7 @@ if [ "$EUID" -ne 0 ] ; then
 fi
 
 PASSWORD=${1:-FLTR}
-SURVEY=$(test $2 && echo 0 || echo 1)
-DIETPIROOT=$3
+DIETPIROOT=$2
 MOUNTDEV=
 
 if [ $(mount | grep media | wc -l) -eq 1 ] ; then
@@ -27,7 +26,7 @@ sed -i "s/AUTO_SETUP_AUTOMATED=.*/AUTO_SETUP_AUTOMATED=1/" ${DIETPIROOT}/boot/di
 sed -i "s/AUTO_SETUP_GLOBAL_PASSWORD=.*/AUTO_SETUP_GLOBAL_PASSWORD=${PASSWORD}/" ${DIETPIROOT}/boot/dietpi.txt
 sed -i "s/AUTO_SETUP_ACCEPT_LICENSE=.*/AUTO_SETUP_ACCEPT_LICENSE=1/" ${DIETPIROOT}/boot/dietpi.txt
 sed -i "s/AUTO_SETUP_NET_WIFI_COUNTRY_CODE=.*/AUTO_SETUP_NET_WIFI_COUNTRY_CODE=US/" ${DIETPIROOT}/boot/dietpi.txt
-sed -i "s/SURVEY_OPTED_IN=.*/SURVEY_OPTED_IN=${SURVEY}/" ${DIETPIROOT}/boot/dietpi.txt
+sed -i "s/SURVEY_OPTED_IN=.*/SURVEY_OPTED_IN=0/" ${DIETPIROOT}/boot/dietpi.txt
 sed -i "s/CONFIG_BOOT_WAIT_FOR_NETWORK=.*/CONFIG_BOOT_WAIT_FOR_NETWORK=2/" ${DIETPIROOT}/boot/dietpi.txt
 sed -i "s/CONFIG_AUTO_DIETPI_UPDATES=.*/CONFIG_AUTO_DIETPI_UPDATES=1/" ${DIETPIROOT}/boot/dietpi.txt
 sed -i "s/CONFIG_WIFI_COUNTRY_CODE=.*/CONFIG_WIFI_COUNTRY_CODE=US/" ${DIETPIROOT}/boot/dietpi.txt
