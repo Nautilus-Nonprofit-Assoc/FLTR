@@ -1,12 +1,10 @@
 #!/bin/bash
 
-# bugfix, see: https://github.com/MichaIng/DietPi/issues/3716
-#test -f /var/lib/dietpi/license.txt && mv /var/lib/dietpi/license.txt /var/lib/dietpi/license.accepted && sleep 10
-
 # install all prerequisites
 apt update -yqq > /dev/null
 apt upgrade -yqq > /dev/null
-DEBIAN_FRONTEND=noninteractive apt -t buster-backports install -yqq git golang-go iptables iptables-persistent netfilter-persistent resolvconf dnsutils screen libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config libc6-dev build-essential make gcc > /dev/null
+DEBIAN_FRONTEND=noninteractive apt -t buster-backports install -yqq git golang-go resolvconf dnsutils screen libpcap-dev libusb-1.0-0-dev libnetfilter-queue-dev pkg-config libc6-dev build-essential make gcc > /dev/null
+DEBIAN_FRONTEND=noninteractive apt install -yqq iptables iptables-persistent netfilter-persistent > /dev/null
 
 # use iptables vs. nftables for performance reasons
 update-alternatives --set iptables /usr/sbin/iptables-legacy
