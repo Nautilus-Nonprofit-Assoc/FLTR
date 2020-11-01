@@ -12,7 +12,6 @@
 - [CoreDNS](https://github.com/coredns/coredns)
 - [DietPi](https://github.com/MichaIng/DietPi)
 - [Energized Protection](https://github.com/EnergizedProtection/block)
-- [Images by catalyst on Freepik](https://www.freepik.com/catalyststuff)
-- [Logo designed by catalyst](http://catalystvibes.dribbble.com/)
+- [Logo and images by catalystvibes](http://catalystvibes.dribbble.com/)
 - [Nunito font by Vernon Adams, Cyreal](https://fonts.google.com/specimen/Nunito)
 - [oxdpus](https://github.com/sematext/oxdpus)
