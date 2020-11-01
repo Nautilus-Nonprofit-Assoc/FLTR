@@ -14,4 +14,5 @@
 - [Energized Protection](https://github.com/EnergizedProtection/block)
 - [Images by catalyst on Freepik](https://www.freepik.com/catalyststuff)
 - [Logo designed by catalyst](http://catalystvibes.dribbble.com/)
+- [Nunito font by Vernon Adams, Cyreal](https://fonts.google.com/specimen/Nunito)
 - [oxdpus](https://github.com/sematext/oxdpus)
